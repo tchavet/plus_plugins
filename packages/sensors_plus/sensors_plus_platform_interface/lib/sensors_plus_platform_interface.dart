@@ -38,6 +38,16 @@ abstract class SensorsPlatform extends PlatformInterface {
     _instance = instance;
   }
 
+  /// The default sensors sample rate
+  final int _sampleRateDefault = 15;
+  /// The user defined sensors sample rate
+  int _sampleRate;
+
+  /// Set the sample rate (samples/second) of the sensors
+  void setSensorsSampleRate(int sampleRate) {
+    _sampleRate = (sampleRate > 0) ? sampleRate : _sampleRate;
+  }
+
   /// A broadcast stream of events from the device accelerometer.
   Stream<AccelerometerEvent> get accelerometerEvents {
     throw UnimplementedError('accelerometerEvents has not been implemented.');

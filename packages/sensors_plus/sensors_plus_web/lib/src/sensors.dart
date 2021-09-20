@@ -57,7 +57,7 @@ class SensorsPlugin extends SensorsPlatform {
       _accelerometerStreamController = StreamController<AccelerometerEvent>();
       _featureDetected(
         () {
-          final _accelerometer = html.Accelerometer();
+          final _accelerometer = html.Accelerometer({frequency: _sampleRate ?? _sampleRateDefault});
 
           setProperty(
             _accelerometer,
@@ -103,7 +103,7 @@ class SensorsPlugin extends SensorsPlatform {
       _gyroscopeEventStreamController = StreamController<GyroscopeEvent>();
       _featureDetected(
         () {
-          final _gyroscope = html.Gyroscope();
+          final _gyroscope = html.Gyroscope({frequency: _sampleRate ?? _sampleRateDefault});
 
           setProperty(
             _gyroscope,
@@ -150,7 +150,7 @@ class SensorsPlugin extends SensorsPlatform {
           StreamController<UserAccelerometerEvent>();
       _featureDetected(
         () {
-          final _linearAccelerationSensor = html.LinearAccelerationSensor();
+          final _linearAccelerationSensor = html.LinearAccelerationSensor({frequency: _sampleRate ?? _sampleRateDefault});
 
           setProperty(
             _linearAccelerationSensor,
@@ -197,7 +197,7 @@ class SensorsPlugin extends SensorsPlatform {
       _magnetometerStreamController = StreamController<MagnetometerEvent>();
       _featureDetected(
         () {
-          final _magnetometerSensor = html.Magnetometer();
+          final _magnetometerSensor = html.Magnetometer({frequency: _sampleRate ?? _sampleRateDefault});
 
           setProperty(
             _magnetometerSensor,

@@ -7,7 +7,12 @@ export 'package:sensors_plus_platform_interface/sensors_plus_platform_interface.
 
 final _sensors = Sensors();
 
-/// A broadcast stream of events from the device accelerometer.
+/// Set the sample rate (samples/second) of the sensors
+void setSensorsSampleRate(int sampleRate) {
+  return _sensors.setSensorsSampleRate(sampleRate);
+}
+
+  /// A broadcast stream of events from the device accelerometer.
 Stream<AccelerometerEvent> get accelerometerEvents {
   return _sensors.accelerometerEvents;
 }

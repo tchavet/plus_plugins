@@ -30,7 +30,7 @@ class MethodChannelSensors extends SensorsPlatform {
   @override
   Stream<AccelerometerEvent> get accelerometerEvents {
     _accelerometerEvents ??= _accelerometerEventChannel
-        .receiveBroadcastStream()
+        .receiveBroadcastStream(_sampleRate ?? _sampleRateDefault)
         .map((dynamic event) {
       final list = event.cast<double>();
       return AccelerometerEvent(list[0]!, list[1]!, list[2]!);
@@ -42,7 +42,7 @@ class MethodChannelSensors extends SensorsPlatform {
   @override
   Stream<GyroscopeEvent> get gyroscopeEvents {
     _gyroscopeEvents ??=
-        _gyroscopeEventChannel.receiveBroadcastStream().map((dynamic event) {
+        _gyroscopeEventChannel.receiveBroadcastStream(_sampleRate ?? _sampleRateDefault).map((dynamic event) {
       final list = event.cast<double>();
       return GyroscopeEvent(list[0]!, list[1]!, list[2]!);
     });
@@ -53,7 +53,7 @@ class MethodChannelSensors extends SensorsPlatform {
   @override
   Stream<UserAccelerometerEvent> get userAccelerometerEvents {
     _userAccelerometerEvents ??= _userAccelerometerEventChannel
-        .receiveBroadcastStream()
+        .receiveBroadcastStream(_sampleRate ?? _sampleRateDefault)
         .map((dynamic event) {
       final list = event.cast<double>();
       return UserAccelerometerEvent(list[0]!, list[1]!, list[2]!);
@@ -65,7 +65,7 @@ class MethodChannelSensors extends SensorsPlatform {
   @override
   Stream<MagnetometerEvent> get magnetometerEvents {
     _magnetometerEvents ??=
-        _magnetometerEventChannel.receiveBroadcastStream().map((dynamic event) {
+        _magnetometerEventChannel.receiveBroadcastStream(_sampleRate ?? _sampleRateDefault).map((dynamic event) {
       final list = event.cast<double>();
       return MagnetometerEvent(list[0]!, list[1]!, list[2]!);
     });
