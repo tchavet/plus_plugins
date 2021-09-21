@@ -41,7 +41,7 @@ abstract class SensorsPlatform extends PlatformInterface {
   /// The default sensors sample rate
   final int sampleRateDefault = 15;
   /// The user defined sensors sample rate
-  int sampleRate;
+  int? sampleRate;
 
   /// Set the sample rate (samples/second) of the sensors
   void setSensorsSampleRate(int sampleRate) {
