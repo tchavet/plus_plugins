@@ -38,14 +38,12 @@ abstract class SensorsPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  /// The default sensors sample rate
-  final int sampleRateDefault = 15;
   /// The user defined sensors sample rate
-  int? sampleRate;
+  int sampleRate = 15;
 
   /// Set the sample rate (samples/second) of the sensors
-  void setSensorsSampleRate(int sampleRate) {
-    sampleRate = (sampleRate > 0) ? sampleRate : sampleRate;
+  void setSensorsSampleRate(int newSampleRate) {
+    sampleRate = (newSampleRate > 0) ? newSampleRate : sampleRate;
   }
 
   /// A broadcast stream of events from the device accelerometer.
