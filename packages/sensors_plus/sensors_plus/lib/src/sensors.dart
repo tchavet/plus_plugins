@@ -13,6 +13,11 @@ class Sensors extends SensorsPlatform {
 
   static SensorsPlatform get _platform => SensorsPlatform.instance;
 
+  /// Set the sample rate (samples/second) of the sensors
+  void setSensorsSampleRate(int newSampleRate) {
+	  return _platform.setSensorsSampleRate(newSampleRate);
+  }
+
   /// A broadcast stream of events from the device accelerometer.
   @override
   Stream<AccelerometerEvent> get accelerometerEvents {
