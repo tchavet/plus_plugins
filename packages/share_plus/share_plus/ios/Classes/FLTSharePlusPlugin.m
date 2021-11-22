@@ -210,7 +210,10 @@ static UIViewController *TopViewControllerForViewController(UIViewController *vi
            subject:(NSString *)subject
     withController:(UIViewController *)controller
           atSource:(CGRect)origin {
-  SharePlusData *data = [[SharePlusData alloc] initWithSubject:subject text:shareText];
+  NSObject *data = [[NSURL alloc] initWithString:shareText];
+  if (data == nil) {
+    data = [[SharePlusData alloc] initWithSubject:subject text:shareText];
+  }
   [self share:@[ data ] withController:controller atSource:origin];
 }
 

@@ -7,7 +7,7 @@ public class DeviceInfoPlusMacosPlugin: NSObject, FlutterPlugin {
         let instance = DeviceInfoPlusMacosPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
-    
+
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "getMacosDeviceInfo":
@@ -16,7 +16,7 @@ public class DeviceInfoPlusMacosPlugin: NSObject, FlutterPlugin {
             result(FlutterMethodNotImplemented)
         }
     }
-    
+
     private func handleDeviceInfo(result: @escaping FlutterResult)-> Void{
         let computerName = Sysctl.hostName
         let hostName = Sysctl.osType
@@ -27,7 +27,8 @@ public class DeviceInfoPlusMacosPlugin: NSObject, FlutterPlugin {
         let activeCPUs = Sysctl.activeCPUs
         let memorySize = Sysctl.memSize
         let cpuFrequency = Sysctl.cpuFreq
-        
+        let guid = SystemUUID.getSystemUUID()
+
         result([
             "computerName": computerName,
             "hostName": hostName,
@@ -37,7 +38,8 @@ public class DeviceInfoPlusMacosPlugin: NSObject, FlutterPlugin {
             "osRelease": osRelease,
             "activeCPUs": activeCPUs,
             "memorySize": memorySize,
-            "cpuFrequency": cpuFrequency
-        ])
+            "cpuFrequency": cpuFrequency,
+            "systemGUID": guid
+        ] as [String: Any?])
     }
 }

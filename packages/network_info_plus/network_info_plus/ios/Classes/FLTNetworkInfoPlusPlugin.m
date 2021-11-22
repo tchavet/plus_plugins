@@ -5,17 +5,25 @@
 #import "FLTNetworkInfoPlusPlugin.h"
 
 #import <CoreLocation/CoreLocation.h>
+#import "FLTCaptiveNetworkInfoProvider.h"
+#import "FLTHotspotNetworkInfoProvider.h"
+#import "FLTNetworkInfo.h"
 #import "FLTNetworkInfoLocationPlusHandler.h"
+#import "FLTNetworkInfoProvider.h"
 #import "SystemConfiguration/CaptiveNetwork.h"
 #import "getgateway.h"
 
 #include <ifaddrs.h>
 
 #include <arpa/inet.h>
+#include <netdb.h>
 
 @interface FLTNetworkInfoPlusPlugin () <CLLocationManagerDelegate>
 
 @property(strong, nonatomic) FLTNetworkInfoLocationPlusHandler* locationHandler;
+@property(strong, nonatomic) id<FLTNetworkInfoProvider> networkInfoProvider;
+
+- (instancetype)initWithNetworkInfoProvider:(id<FLTNetworkInfoProvider>)networkInfoProvider;
 
 @end
 
@@ -23,7 +31,14 @@
 }
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
-  FLTNetworkInfoPlusPlugin* instance = [[FLTNetworkInfoPlusPlugin alloc] init];
+  id<FLTNetworkInfoProvider> networkInfoProvider;
+  if (@available(iOS 14, *)) {
+    networkInfoProvider = [[FLTHotspotNetworkInfoProvider alloc] init];
+  } else {
+    networkInfoProvider = [[FLTCaptiveNetworkInfoProvider alloc] init];
+  }
+  FLTNetworkInfoPlusPlugin* instance =
+      [[FLTNetworkInfoPlusPlugin alloc] initWithNetworkInfoProvider:networkInfoProvider];
 
   FlutterMethodChannel* channel =
       [FlutterMethodChannel methodChannelWithName:@"dev.fluttercommunity.plus/network_info"
@@ -31,15 +46,14 @@
   [registrar addMethodCallDelegate:instance channel:channel];
 }
 
+- (instancetype)initWithNetworkInfoProvider:(id<FLTNetworkInfoProvider>)networkInfoProvider {
+  if ((self = [super init])) {
+    self.networkInfoProvider = networkInfoProvider;
+  }
+  return self;
+}
+
 #pragma mark - Callbacks
-
-- (NSString*)getWifiName {
-  return [self findNetworkInfo:@"SSID"];
-}
-
-- (NSString*)getBSSID {
-  return [self findNetworkInfo:@"BSSID"];
-}
 
 - (NSString*)getGatewayIP {
   struct in_addr gatewayAddr;
@@ -47,50 +61,44 @@
   if (gatewayAdressResult >= 0) {
     return [NSString stringWithFormat:@"%s", inet_ntoa(gatewayAddr)];
   } else {
-    return @"error";
+    return nil;
   }
 }
 
 - (NSString*)getWifiIP {
-  struct ifaddrs* temp_addr = [self getWifiInterfaceIPv4];
-  if (temp_addr) {
-    return [NSString
-        stringWithUTF8String:inet_ntoa(((struct sockaddr_in*)temp_addr->ifa_addr)->sin_addr)];
-  } else {
-    return @"error";
-  }
+  __block NSString* addr = nil;
+  [self enumerateWifiAddresses:AF_INET
+                    usingBlock:^(struct ifaddrs* ifaddr) {
+                      addr = [self descriptionForAddress:ifaddr->ifa_addr];
+                    }];
+  return addr;
 }
 
 - (NSString*)getWifiIPv6 {
-  struct ifaddrs* temp_addr = [self getWifiInterfaceIPv6];
-  if (temp_addr) {
-    char ipv6AddressBuffer[MAX(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)];
-    const struct sockaddr_in6* addr6 = (const struct sockaddr_in6*)temp_addr->ifa_addr;
-    return [NSString stringWithUTF8String:inet_ntop(AF_INET6, &addr6->sin6_addr, ipv6AddressBuffer,
-                                                    INET6_ADDRSTRLEN)];
-  } else {
-    return @"error";
-  }
+  __block NSString* addr = nil;
+  [self enumerateWifiAddresses:AF_INET6
+                    usingBlock:^(struct ifaddrs* ifaddr) {
+                      addr = [self descriptionForAddress:ifaddr->ifa_addr];
+                    }];
+  return addr;
 }
 
 - (NSString*)getWifiSubmask {
-  struct ifaddrs* temp_addr = [self getWifiInterfaceIPv4];
-  if (temp_addr) {
-    return [NSString
-        stringWithUTF8String:inet_ntoa(((struct sockaddr_in*)temp_addr->ifa_netmask)->sin_addr)];
-  } else {
-    return @"error";
-  }
+  __block NSString* addr = nil;
+  [self enumerateWifiAddresses:AF_INET
+                    usingBlock:^(struct ifaddrs* ifaddr) {
+                      addr = [self descriptionForAddress:ifaddr->ifa_netmask];
+                    }];
+  return addr;
 }
 
 - (NSString*)getWifiBroadcast {
-  struct ifaddrs* temp_addr = [self getWifiInterfaceIPv4];
-  if (temp_addr) {
-    return [NSString
-        stringWithUTF8String:inet_ntoa(((struct sockaddr_in*)temp_addr->ifa_dstaddr)->sin_addr)];
-  } else {
-    return @"error";
-  }
+  __block NSString* addr = nil;
+  [self enumerateWifiAddresses:AF_INET
+                    usingBlock:^(struct ifaddrs* ifaddr) {
+                      addr = [self descriptionForAddress:ifaddr->ifa_dstaddr];
+                    }];
+  return addr;
 }
 
 - (NSString*)convertCLAuthorizationStatusToString:(CLAuthorizationStatus)status {
@@ -118,9 +126,13 @@
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
   if ([call.method isEqualToString:@"wifiName"]) {
-    result([self getWifiName]);
+    [self.networkInfoProvider fetchNetworkInfoWithCompletionHandler:^(FLTNetworkInfo* networkInfo) {
+      result(networkInfo.SSID);
+    }];
   } else if ([call.method isEqualToString:@"wifiBSSID"]) {
-    result([self getBSSID]);
+    [self.networkInfoProvider fetchNetworkInfoWithCompletionHandler:^(FLTNetworkInfo* networkInfo) {
+      result(networkInfo.BSSID);
+    }];
   } else if ([call.method isEqualToString:@"wifiIPAddress"]) {
     result([self getWifiIP]);
   } else if ([call.method isEqualToString:@"wifiIPv6Address"]) {
@@ -157,31 +169,9 @@
 
 #pragma mark - Utils
 
-- (NSString*)findNetworkInfo:(NSString*)key {
-  NSString* info = nil;
-  NSArray* interfaceNames = (__bridge_transfer id)CNCopySupportedInterfaces();
-  for (NSString* interfaceName in interfaceNames) {
-    NSDictionary* networkInfo =
-        (__bridge_transfer id)CNCopyCurrentNetworkInfo((__bridge CFStringRef)interfaceName);
-    if (networkInfo[key]) {
-      info = networkInfo[key];
-    }
-  }
-  return info;
-}
-
-- (struct ifaddrs*)getWifiInterfaceIPv4 {
-  return [self getWifiInterface:AF_INET];
-}
-
-- (struct ifaddrs*)getWifiInterfaceIPv6 {
-  return [self getWifiInterface:AF_INET6];
-}
-
-- (struct ifaddrs*)getWifiInterface:(NSInteger)family {
+- (void)enumerateWifiAddresses:(NSInteger)family usingBlock:(void (^)(struct ifaddrs*))block {
   struct ifaddrs* interfaces = NULL;
   struct ifaddrs* temp_addr = NULL;
-  struct ifaddrs* wifi_addr = NULL;
   int success = 0;
 
   // retrieve the current interfaces - returns 0 on success
@@ -190,14 +180,10 @@
     // Loop through linked list of interfaces
     temp_addr = interfaces;
     while (temp_addr != NULL) {
-      if (temp_addr->ifa_addr->sa_family == AF_INET || temp_addr->ifa_addr->sa_family == AF_INET6) {
+      if (temp_addr->ifa_addr->sa_family == family) {
         // en0 is the wifi connection on iOS
         if ([[NSString stringWithUTF8String:temp_addr->ifa_name] isEqualToString:@"en0"]) {
-          if (temp_addr->ifa_addr->sa_family == family) {
-            wifi_addr = temp_addr;
-          } else if (temp_addr->ifa_addr->sa_family == family) {
-            wifi_addr = temp_addr;
-          }
+          block(temp_addr);
         }
       }
 
@@ -207,8 +193,12 @@
 
   // Free memory
   freeifaddrs(interfaces);
+}
 
-  return wifi_addr;
+- (NSString*)descriptionForAddress:(struct sockaddr*)addr {
+  char hostname[NI_MAXHOST];
+  getnameinfo(addr, addr->sa_len, hostname, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+  return [NSString stringWithUTF8String:hostname];
 }
 
 @end
